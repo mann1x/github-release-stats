@@ -1,4 +1,8 @@
 var apiRoot = "https://api.github.com/";
+var overview = false;
+var asyncResults = -1;
+var grandDownloadCount = 0;
+var grandhtml = '';
 
 function getQueryVariable(variable) {
     var query = window.location.search.substring(1);
@@ -21,6 +25,10 @@ function validateInput() {
     }
 }
 
+// Sleep function
+const sleep = (milliseconds) => {
+    return new Promise(resolve => setTimeout(resolve, milliseconds))
+}
 // Focus on #username when document is ready
 $(document).ready(function() {
     if (!$("#username").val()) {
@@ -36,8 +44,8 @@ function getUserRepos() {
     var repoNames = [];
 
     var url = apiRoot + "users/" + user + "/repos";
-    $.getJSON(url, function(data) {
-        $.each(data, function(index, item) {
+    $.getJSON(url, function (data) {
+        $.each(data, function (index, item) {
             repoNames.push(item.name);
         });
     });
@@ -45,11 +53,12 @@ function getUserRepos() {
     autoComplete.data('typeahead').source = repoNames;
 }
 
-// Display the stats
+// Display the stats for a single repository
 function showStats(data) {
 
     var err = false;
     var errMessage = '';
+    var totalDownloadCount = 0;
 
     if(data.status == 404) {
         err = true;
@@ -71,82 +80,18 @@ function showStats(data) {
     if(err) {
         html = "<div class='col-md-6 col-md-offset-3 error output'>" + errMessage + "</div>";
     } else {
-        html += "<div class='col-md-6 col-md-offset-3 output'>";
-        var latest = true;
-        var totalDownloadCount = 0;
 
         // Set title to username/repository
         document.title = $("#username").val() + "/" + $("#repository").val() + " - " + document.title;
 
-        // Sort by publish date
-        data.sort(function (a, b) {
-            return (a.published_at < b.published_at) ? 1 : -1;
-        });
+        html += "<div class='col-md-6 col-md-offset-3 output'>";
 
-        $.each(data, function(index, item) {
-            var releaseTag = item.tag_name;
-            var releaseURL = item.html_url;
-            var releaseAssets = item.assets;
-            var hasAssets = releaseAssets.length != 0;
-            var releaseAuthor = item.author;
-            var hasAuthor = releaseAuthor != null;
-            var publishDate = item.published_at.split("T")[0];
-            var ReleaseDownloadCount = 0;
+        const { ret_html, ret_totalDownloadCount } = showRowStats(data);
 
-            if(latest) {
-                html += "<div class='row release latest-release'>" +
-                    "<h2><a href='" + releaseURL + "' target='_blank'>" +
-                    "<span class='glyphicon glyphicon-tag'></span>&nbsp&nbsp" +
-                    "Latest Release: " + releaseTag +
-                    "</a></h2><hr class='latest-release-hr'>";
-                latest = false;
-            } else {
-                html += "<div class='row release'>" +
-                    "<h4><a href='" + releaseURL + "' target='_blank'>" +
-                    "<span class='glyphicon glyphicon-tag'></span>&nbsp&nbsp" +
-                    releaseTag +
-                    "</a></h4><hr class='release-hr'>";
-            }
+        html += ret_html;
 
-            if(hasAssets) {
-                var downloadInfoHTML = "<h4><span class='glyphicon glyphicon-download'></span>" +
-                    "&nbsp&nbspDownload Info: </h4>";
-                downloadInfoHTML += "<ul>";
-                html += "<ul>";
-                $.each(releaseAssets, function(index, asset) {
-                    var assetSize = (asset.size / 1048576.0).toFixed(2).replace(/\./, ',');
-                    var lastUpdate = asset.updated_at.split("T")[0];
-                    downloadInfoHTML += "<li><a href=\"" + asset.browser_download_url + "\">" + asset.name + "</a> (" + assetSize + " MiB)<br>" +
-                        "<i>Last updated on " + lastUpdate + " &mdash; Downloaded " +
-                        asset.download_count.toString().replace(/(\d)(?=(\d{3})+$)/g, '$1&#8239;');
-                    asset.download_count == 1 ? downloadInfoHTML += " time</i></li>" : downloadInfoHTML += " times</i></li>";
-                    totalDownloadCount += asset.download_count;
-                    ReleaseDownloadCount += asset.download_count;
-                });
-            }
+        totalDownloadCount += ret_totalDownloadCount;
 
-            html += "<h4><span class='glyphicon glyphicon-info-sign'></span>&nbsp&nbsp" +
-                "Release Info:</h4>";
-
-            html += "<ul style=\"list-style-type:none\">";
-
-            html += "<li><span class='glyphicon glyphicon-calendar'></span>&nbsp&nbspPublished on: " +
-                publishDate + "</li>";
-
-            if(hasAuthor) {
-                html += "<li><span class='glyphicon glyphicon-user'></span>&nbsp&nbspRelease Author: " +
-                    "<a href='" + releaseAuthor.html_url + "'>" + releaseAuthor.login +"</a><br></li>";
-            }
-
-            html += "<li><span class='glyphicon glyphicon-download'></span>&nbsp&nbspDownloads: " +
-                ReleaseDownloadCount.toString().replace(/(\d)(?=(\d{3})+$)/g, '$1&#8239;') + "</li>";
-
-            html += "</ul>";
-
-            html += downloadInfoHTML;
-
-            html += "</div>";
-        });
 
         if(totalDownloadCount > 0) {
             totalDownloadCount = totalDownloadCount.toString().replace(/(\d)(?=(\d{3})+$)/g, '$1&#8239;');
@@ -161,11 +106,197 @@ function showStats(data) {
         html += "</div>";
     }
 
+    showResultsDiv(html);
+}
+
+
+ // Show the error message for the overview
+function showErrorMessage(data) {
+    var errMessage = '';
+
+    if (data.status == 403) {
+        errMessage = "You've exceeded GitHub's rate limiting.<br />Please try again in about an hour.";
+    }
+
+    if (data.status == 404) {
+        errMessage = "The username does not exist!";
+    }
+
+    if (errMessage != '') {
+        html = "<div class='col-md-6 col-md-offset-3 error output'>" + errMessage + "</div>";
+    } else {
+        html = "<div class='col-md-6 col-md-offset-3 error output'>Unknown error occurred</div>";
+    }
+
+    showResultsDiv(html);
+}
+
+// Show the results 
+function showResultsDiv(html) {
     var resultDiv = $("#stats-result");
+
     resultDiv.hide();
     resultDiv.html(html);
     $("#loader-gif").hide();
     resultDiv.slideDown();
+}
+
+// Parse the single repository and start the async query for the latest release
+function showOverview(data) {
+
+    var user = $("#username").val();
+
+    overview = true;
+
+    grandhtml += "<div class='col-md-6 col-md-offset-3 output'>";
+
+    if (data && data.length > 0) {
+        $.each(data, function (index, item) {
+
+            url = apiRoot + "repos/" + user + "/" + item.name + "/releases";
+
+            $.getJSON(url, function (datarepo) {
+                const { ret_html, ret_totalDownloadCount } = showRowStats(datarepo, item.name);
+
+                grandhtml += ret_html;
+                grandDownloadCount += ret_totalDownloadCount;
+            })
+            .then(function () {
+                asyncResults--;
+            })
+        });
+    }
+
+}
+
+// Get all the repos and start the task that waits the results for the stats overview for latest releases
+function getOverview() {
+
+    var user = $("#username").val();
+
+    var url = apiRoot + "users/" + user + "/repos";
+
+    // Set title to username/*
+    document.title = $("#username").val() + "/* - " + document.title;
+    
+    $.getJSON(url, function (data) {
+        asyncResults = data.length;
+        showOverview(data);
+    })
+    .fail(function (data) {
+        showErrorMessage(data);
+    });
+
+    waitResults();
+}
+
+// Wait for all async queries to terminate and show the releases and downloads grandtotal 
+const waitResults = async () => {
+    while (asyncResults != 0) {
+        await sleep(100);
+    }
+
+    if (grandDownloadCount > 0) {
+        grandDownloadCount = grandDownloadCount.toString().replace(/(\d)(?=(\d{3})+$)/g, '$1&#8239;');
+        var totalHTML = "<div class='row total-downloads'>";
+        totalHTML += "<h2><span class='glyphicon glyphicon-download'></span>" +
+            "&nbsp&nbspTotal Downloads</h2> ";
+        totalHTML += "<span>" + grandDownloadCount + "</span>";
+        totalHTML += "</div>";
+        grandhtml = totalHTML + grandhtml;
+    }
+
+    grandhtml += "</div>";
+
+    showResultsDiv(grandhtml);
+}
+
+// Show single or multiple release stats
+const showRowStats = (data, repoName = '') => {
+    var html = '';
+
+    var latest = true;
+    var totalDownloadCount = 0;
+
+    // Sort by publish date
+    data.sort(function (a, b) {
+        return (a.published_at < b.published_at) ? 1 : -1;
+    });
+
+    $.each(data, function (index, item) {
+        if (repoName.length > 0 && !latest) return;
+
+        var releaseTag = item.tag_name;
+        var releaseURL = item.html_url;
+        var releaseAssets = item.assets;
+        var hasAssets = releaseAssets.length != 0;
+        var releaseAuthor = item.author;
+        var hasAuthor = releaseAuthor != null;
+        var publishDate = item.published_at.split("T")[0];
+        var ReleaseDownloadCount = 0;
+        var latestRelease = "Latest Release: " + releaseTag;
+        if (repoName.length > 0) latestRelease = repoName + " " + releaseTag;
+
+        if (latest) {
+            html += "<div class='row release latest-release'>" +
+                "<h2><a href='" + releaseURL + "' target='_blank'>" +
+                "<span class='glyphicon glyphicon-tag'></span>&nbsp&nbsp" +
+                latestRelease +
+                "</a></h2><hr class='latest-release-hr'>";
+            latest = false;
+        } else {
+            html += "<div class='row release'>" +
+                "<h4><a href='" + releaseURL + "' target='_blank'>" +
+                "<span class='glyphicon glyphicon-tag'></span>&nbsp&nbsp" +
+                releaseTag +
+                "</a></h4><hr class='release-hr'>";
+        }
+
+        if (hasAssets) {
+            var downloadInfoHTML = "<h4><span class='glyphicon glyphicon-download'></span>" +
+                "&nbsp&nbspDownload Info: </h4>";
+            downloadInfoHTML += "<ul>";
+            html += "<ul>";
+            $.each(releaseAssets, function (index, asset) {
+                var assetSize = (asset.size / 1048576.0).toFixed(2).replace(/\./, ',');
+                var lastUpdate = asset.updated_at.split("T")[0];
+                downloadInfoHTML += "<li><a href=\"" + asset.browser_download_url + "\">" + asset.name + "</a> (" + assetSize + " MiB)<br>" +
+                    "<i>Last updated on " + lastUpdate + " &mdash; Downloaded " +
+                    asset.download_count.toString().replace(/(\d)(?=(\d{3})+$)/g, '$1&#8239;');
+                asset.download_count == 1 ? downloadInfoHTML += " time</i></li>" : downloadInfoHTML += " times</i></li>";
+                totalDownloadCount += asset.download_count;
+                ReleaseDownloadCount += asset.download_count;
+            });
+        }
+
+        html += "<h4><span class='glyphicon glyphicon-info-sign'></span>&nbsp&nbsp" +
+            "Release Info:</h4>";
+
+        html += "<ul style=\"list-style-type:none\">";
+
+        html += "<li><span class='glyphicon glyphicon-calendar'></span>&nbsp&nbspPublished on: " +
+            publishDate + "</li>";
+
+        if (hasAuthor) {
+            html += "<li><span class='glyphicon glyphicon-user'></span>&nbsp&nbspRelease Author: " +
+                "<a href='" + releaseAuthor.html_url + "'>" + releaseAuthor.login + "</a><br></li>";
+        }
+
+        html += "<li><span class='glyphicon glyphicon-download'></span>&nbsp&nbspDownloads: " +
+            ReleaseDownloadCount.toString().replace(/(\d)(?=(\d{3})+$)/g, '$1&#8239;') + "</li>";
+
+        html += "</ul>";
+
+        html += downloadInfoHTML;
+
+        html += "</div>";
+
+    });
+
+    const ret_html = html;
+    const ret_totalDownloadCount = totalDownloadCount;
+    return { ret_html, ret_totalDownloadCount };
+
 }
 
 // Callback function for getting release stats
@@ -209,6 +340,10 @@ $(function() {
         $(".output").hide();
         $("#description").hide();
         $("#loader-gif").show();
-        getStats();
+        if (repository == "*") {
+            getOverview();
+        } else {
+            getStats();
+        }
     }
 });
