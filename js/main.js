@@ -160,8 +160,6 @@ function showOverview(data) {
 
                 url = apiRoot + "repos/" + user + "/" + item.name + "/releases";
 
-                console.log("URL "+url);
-
                 $.getJSON(url, function (datarepo) {
                     const { ret_html, ret_totalDownloadCount } = showRowStats(datarepo, item.name, item.updated_at);
 
