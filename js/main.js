@@ -148,22 +148,33 @@ function showOverview(data) {
 
     overview = true;
 
-    grandhtml += "<div class='col-md-6 col-md-offset-3 output'>";
+    // Sort by updated date
+    data.sort(function (a, b) {
+        return (a.updated_at > b.updated_at) ? 1 : -1;
+    });
 
     if (data && data.length > 0) {
         $.each(data, function (index, item) {
 
-            url = apiRoot + "repos/" + user + "/" + item.name + "/releases";
+            if (item.has_downloads) {
 
-            $.getJSON(url, function (datarepo) {
-                const { ret_html, ret_totalDownloadCount } = showRowStats(datarepo, item.name);
+                url = apiRoot + "repos/" + user + "/" + item.name + "/releases";
 
-                grandhtml += ret_html;
-                grandDownloadCount += ret_totalDownloadCount;
-            })
-            .then(function () {
-                asyncResults--;
-            })
+                console.log("URL "+url);
+
+                $.getJSON(url, function (datarepo) {
+                    const { ret_html, ret_totalDownloadCount } = showRowStats(datarepo, item.name, item.updated_at);
+
+                    grandhtml = ret_html + grandhtml;
+                    grandDownloadCount += ret_totalDownloadCount;
+                })
+                .fail(function (data) {
+                    showErrorMessage(data);
+                })
+                .then(function () {
+                    asyncResults--;
+                })
+            }
         });
     }
 
@@ -206,13 +217,14 @@ const waitResults = async () => {
         grandhtml = totalHTML + grandhtml;
     }
 
+    grandhtml = "<div class='col-md-6 col-md-offset-3 output'>" + grandhtml;
     grandhtml += "</div>";
 
     showResultsDiv(grandhtml);
 }
 
 // Show single or multiple release stats
-const showRowStats = (data, repoName = '') => {
+const showRowStats = (data, repoName = '', updated_at = '') => {
     var html = '';
 
     var latest = true;
@@ -221,6 +233,11 @@ const showRowStats = (data, repoName = '') => {
     // Sort by publish date
     data.sort(function (a, b) {
         return (a.published_at < b.published_at) ? 1 : -1;
+    });
+
+    //Filter pre-release and draft if overview
+    data.filter(function(a, b) {
+        return b.draft == false && b.prerelease == false;
     });
 
     $.each(data, function (index, item) {
@@ -233,8 +250,11 @@ const showRowStats = (data, repoName = '') => {
         var releaseAuthor = item.author;
         var hasAuthor = releaseAuthor != null;
         var publishDate = item.published_at.split("T")[0];
+        var updateDate = "";
+        if (updated_at.length > 0) updateDate = updated_at.split("T")[0];
         var ReleaseDownloadCount = 0;
         var latestRelease = "Latest Release: " + releaseTag;
+        var downloadInfoHTML = '';
         if (repoName.length > 0) latestRelease = repoName + " " + releaseTag;
 
         if (latest) {
@@ -253,7 +273,7 @@ const showRowStats = (data, repoName = '') => {
         }
 
         if (hasAssets) {
-            var downloadInfoHTML = "<h4><span class='glyphicon glyphicon-download'></span>" +
+            downloadInfoHTML = "<h4><span class='glyphicon glyphicon-download'></span>" +
                 "&nbsp&nbspDownload Info: </h4>";
             downloadInfoHTML += "<ul>";
             html += "<ul>";
@@ -267,6 +287,23 @@ const showRowStats = (data, repoName = '') => {
                 totalDownloadCount += asset.download_count;
                 ReleaseDownloadCount += asset.download_count;
             });
+        }
+
+        if (updateDate.length > 0) {
+            html += "<h4><span class='glyphicon glyphicon-info-sign'></span>&nbsp&nbsp" +
+                "Repository Info:</h4>";
+
+            html += "<ul style=\"list-style-type:none\">";
+
+            html += "<li><span class='glyphicon glyphicon-calendar'></span>&nbsp&nbspUpdated on: " +
+                    updateDate + "</li>";
+
+            var repourl = new URL(window.location.href);
+            repourl.searchParams.set('repository', repoName);
+
+            html += "<li><span class='glyphicon glyphicon-user'></span>&nbsp&nbsp<a href='" + repourl + "'>" + repoName + " statistics</a></li>";
+
+            html += "</ul>";
         }
 
         html += "<h4><span class='glyphicon glyphicon-info-sign'></span>&nbsp&nbsp" +
