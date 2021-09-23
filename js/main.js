@@ -1,5 +1,4 @@
 var apiRoot = "https://api.github.com/";
-var overview = false;
 var asyncResults = -1;
 var grandDownloadCount = 0;
 var grandhtml = '';
@@ -109,7 +108,6 @@ function showStats(data) {
     showResultsDiv(html);
 }
 
-
  // Show the error message for the overview
 function showErrorMessage(data) {
     var errMessage = '';
@@ -141,39 +139,59 @@ function showResultsDiv(html) {
     resultDiv.slideDown();
 }
 
-// Parse the single repository and start the async query for the latest release
-function showOverview(data) {
+// Get repository for the overview
+function getRepo(item) {
+    return new Promise((resolve, reject) => {
 
-    var user = $("#username").val();
+        var user = $("#username").val();
 
-    overview = true;
+        url = apiRoot + "repos/" + user + "/" + item.name + "/releases";
 
-    // Sort by updated date
-    data.sort(function (a, b) {
-        return (a.updated_at > b.updated_at) ? 1 : -1;
+        $.getJSON(url, function (datarepo) {
+
+            const { ret_html, ret_totalDownloadCount } = showRowStats(datarepo, item.name, item.updated_at);
+
+            grandhtml = ret_html + grandhtml;
+            grandDownloadCount += ret_totalDownloadCount;
+        })
+        .fail(function (data) {
+            showErrorMessage(data);
+        })
+        .then(function () {
+            asyncResults--;
+        });
+
+        resolve();
     });
+}
+
+// Throttle repository API calls for the overview
+async function waitRepo(item) {
+    await getRepo(item);
+    return (await sleep(750));
+}
+
+
+// Parse the single repository and start the async query for the latest release
+const showOverview = async (data) => {
+//function showOverview(data) {
 
     if (data && data.length > 0) {
-        $.each(data, function (index, item) {
+        startTime = new Date();
 
-            if (item.has_downloads) {
-
-                url = apiRoot + "repos/" + user + "/" + item.name + "/releases";
-
-                $.getJSON(url, function (datarepo) {
-                    const { ret_html, ret_totalDownloadCount } = showRowStats(datarepo, item.name, item.updated_at);
-
-                    grandhtml = ret_html + grandhtml;
-                    grandDownloadCount += ret_totalDownloadCount;
-                })
-                .fail(function (data) {
-                    showErrorMessage(data);
-                })
-                .then(function () {
-                    asyncResults--;
-                })
-            }
+        // Sort by updated date
+        data.sort(function (a, b) {
+            return (a.updated_at > b.updated_at) ? 1 : -1;
         });
+
+        asyncResults = data.length;
+
+        for (let key in data) {
+            if (data.hasOwnProperty(key)) {
+                await waitRepo(data[key]);
+            }
+        }
+
     }
 
 }
@@ -189,7 +207,6 @@ function getOverview() {
     document.title = $("#username").val() + "/* - " + document.title;
     
     $.getJSON(url, function (data) {
-        asyncResults = data.length;
         showOverview(data);
     })
     .fail(function (data) {
@@ -234,9 +251,11 @@ const showRowStats = (data, repoName = '', updated_at = '') => {
     });
 
     //Filter pre-release and draft if overview
-    data.filter(function(a, b) {
-        return b.draft == false && b.prerelease == false;
-    });
+    if (repoName.length > 0) {
+        data.filter(function(a, b) {
+            return b.draft == false && b.prerelease == false;
+        });
+    }
 
     $.each(data, function (index, item) {
         if (repoName.length > 0 && !latest) return;
