@@ -632,12 +632,9 @@ function setToken() {
             $('#set-api-label').hide();
             $('#change-api-label').show();
         } else {
-            if (setCookie("api_token", $("#token").val()), Infinity, "/", "", true) {
-                $('#set-api-label').hide();
-                $('#change-api-label').show();
-            } else {
-                console.log("Failed to Set Cookie for API Token!");
-            }
+            setCookie("api_token", $("#token").val()), Infinity, "/", "", true);
+            $('#set-api-label').hide();
+            $('#change-api-label').show();
         }
     } else {
         if (window.location.protocol == "file:") {
