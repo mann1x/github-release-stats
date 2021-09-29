@@ -176,6 +176,7 @@ function showResultsDiv(html) {
 function setTokenAuth(xhr) {
     api_token = getToken();
     if (api_token) xhr.setRequestHeader('Authorization', 'token ' + api_token);
+    if (api_token) console.log("API token set");
 }
 
 // Get single repository async for the overview
@@ -637,16 +638,19 @@ function setToken() {
             setCookie("api_token", $("#token").val(), Infinity, "/", "", true);
             $('#set-api-label').hide();
             $('#change-api-label').show();
+            console.log("API Token Cookie set");
         }
     } else {
         if (window.location.protocol == "file:") {
             window.localStorage.removeItem('api_token');
         } else {
             deleteCookie("api_token", "/");
+            console.log("API Token Cookie unset");
         }
         $('#set-api-label').show();
-        $('#change-api-label').hide();
+        $('#change-api-label').hide();        
     }
+    $("#settoken-div").hide();
 }
 
 // Get (from a cookie or localStorage) the API token 
