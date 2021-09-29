@@ -13,9 +13,7 @@ var lastPos = 0;
 var asyncFail = false;
 
 //Get Cookie function
-const getCookie = (name) => (
-    document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)')?.pop() || ''
-)
+function getCookie(k) { var v = document.cookie.match('(^|;) ?' + k + '=([^;]*)(;|$)'); return v ? v[2] : null }
 
 //Delete Cookie function
 function deleteCookie(sKey, sPath, sDomain) {
