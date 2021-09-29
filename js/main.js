@@ -10,6 +10,7 @@ var api_token = '';
 var api_token_valid = true;
 var link_header = '';
 var lastPos = 0;
+var asyncFail = false;
 
 //Get Cookie function
 const getCookie = (name) => (
@@ -236,11 +237,13 @@ function getRepoSingle() {
             })
             .done(function (data) {
                 asyncResults--;
-                singleRelease = JSON.stringify(data);
+                asyncFail = false;
+                singleRelease = data;
             })
             .fail(function (data) {
                 asyncResults--;
-                showErrorMessage(data);
+                asyncFail = true;
+                singleRelease = data;
             })
             .always(function () {
                 ratelimit_limit = xhr.getResponseHeader("x-ratelimit-limit");
@@ -379,43 +382,45 @@ const waitSingleResult = async () => {
     }
 
 
-    if (singleRelease) {
-
-        singleRelease = JSON.parse(singleRelease)
-
-        if (singleRelease.length > 0) {
-            var totalDownloadCount = 0;
-            var html = '';
-
-            html += "<div class='col-md-6 col-md-offset-3 output'>";
-
-            const { ret_html, ret_totalDownloadCount } = showRowStats(singleRelease);
-
-            html += ret_html;
-
-            totalDownloadCount += ret_totalDownloadCount;
-            if (totalDownloadCount > 0) {
-                totalDownloadCount = totalDownloadCount.toString().replace(/(\d)(?=(\d{3})+$)/g, '$1&#8239;');
-                var totalHTML = "<div class='row total-downloads'>";
-                totalHTML += "<h2><span class='glyphicon glyphicon-download'></span><span>" +
-                    "&nbsp&nbspTotal&nbspDownloads:&nbsp&nbsp";
-                totalHTML += "<b>" + totalDownloadCount + "</b></h2></span>";
-                totalHTML += "</div>";
-                html = totalHTML + html;
-            }
-
-            html += "</div>";
-
-            showResultsDiv(html);
-
-            $("#toppager-div").show();
-            $("#bottompager-div").show();
-
-        } else {
-            showErrorMessage("No releases found");
-        }
+    if (asyncFail) {
+        showErrorMessage(singleRelease);
     } else {
+        if (singleRelease) {
+            if (singleRelease.length > 0) {
+            
+                var totalDownloadCount = 0;
+                var html = '';
+
+                html += "<div class='col-md-6 col-md-offset-3 output'>";
+
+                const { ret_html, ret_totalDownloadCount } = showRowStats(singleRelease);
+
+                html += ret_html;
+
+                totalDownloadCount += ret_totalDownloadCount;
+                if (totalDownloadCount > 0) {
+                    totalDownloadCount = totalDownloadCount.toString().replace(/(\d)(?=(\d{3})+$)/g, '$1&#8239;');
+                    var totalHTML = "<div class='row total-downloads'>";
+                    totalHTML += "<h2><span class='glyphicon glyphicon-download'></span><span>" +
+                        "&nbsp&nbspTotal&nbspDownloads:&nbsp&nbsp";
+                    totalHTML += "<b>" + totalDownloadCount + "</b></h2></span>";
+                    totalHTML += "</div>";
+                    html = totalHTML + html;
+                }
+
+                html += "</div>";
+
+                showResultsDiv(html);
+
+                $("#toppager-div").show();
+                $("#bottompager-div").show();
+
+            } else {
+                showErrorMessage("No releases found");
+            }
+        } else {
         showErrorMessage("No releases found");
+        }
     }
 }
 
