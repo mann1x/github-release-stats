@@ -377,9 +377,11 @@ const waitSingleResult = async () => {
         await sleep(10);
     }
 
-    singleRelease = JSON.parse(singleRelease)
 
     if (singleRelease) {
+
+        singleRelease = JSON.parse(singleRelease)
+
         if (singleRelease.length > 0) {
             var totalDownloadCount = 0;
             var html = '';
