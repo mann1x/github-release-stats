@@ -72,29 +72,30 @@ function getUserRepos() {
         var repoNames = [];
 
         var url = apiRoot + "users/" + user + "/repos?per_page=100";
+
         var xhr = $.ajax({
             url: url,
             type: 'GET',
             dataType: 'json',
-            beforeSend: setTokenAuth,
-            done: function (data) {
-                $.each(data, function (index, item) {
-                    repoNames.push(item.name);
-                })
-            },
-            fail: function (data) {
-                if (data) {
-                    if (data.status == 401 && api_token.length > 0) {
-                        api_token_valid = false;
-                        $('#change-api-label').css('color', '#FF2D00');
-                    }
+            beforeSend: setTokenAuth
+        })
+        .done(function (data) {
+            $.each(data, function (index, item) {
+                repoNames.push(item.name);
+            });
+        })
+        .fail(function (data) {
+            if (data) {
+                if (data.status == 401 && api_token.length > 0) {
+                    api_token_valid = false;
+                    $('#change-api-label').css('color', '#FF2D00');
                 }
-            },
-            always: function () {
-                ratelimit_limit = xhr.getResponseHeader("x-ratelimit-limit");
-                ratelimit_remaining = xhr.getResponseHeader("x-ratelimit-remaining");
-                updateRateLimit(ratelimit_remaining, ratelimit_limit);
             }
+        })
+        .always(function () {
+            ratelimit_limit = xhr.getResponseHeader("x-ratelimit-limit");
+            ratelimit_remaining = xhr.getResponseHeader("x-ratelimit-remaining");
+            updateRateLimit(ratelimit_remaining, ratelimit_limit);
         });
    
         autoComplete.data('typeahead').source = repoNames;
