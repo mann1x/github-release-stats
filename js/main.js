@@ -12,41 +12,9 @@ var link_header = '';
 var lastPos = 0;
 var asyncFail = false;
 
-//Get Cookie function
-function getCookie(k) { var v = document.cookie.match('(^|;) ?' + k + '=([^;]*)(;|$)'); return v ? v[2] : null }
-
-//Delete Cookie function
-function deleteCookie(sKey, sPath, sDomain) {
-    document.cookie = encodeURIComponent(sKey) +
-        "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=None; Secure" +
-        (sDomain ? "; domain=" + sDomain : "") +
-        (sPath ? "; path=" + sPath : "");
-}
-
-//Set Cookie function
-function setCookie(sKey, sValue, vEnd, sPath, sDomain, bSecure) {
-    if (!sKey || /^(?:expires|max\-age|path|domain|secure)$/i.test(sKey)) { return false; }
-    var sExpires = "";
-    if (vEnd) {
-        switch (vEnd.constructor) {
-            case Number:
-                sExpires = vEnd === Infinity ? "; expires=Fri, 31 Dec 9999 23:59:59 GMT" : "; max-age=" + vEnd;
-                break;
-            case String:
-                sExpires = "; expires=" + vEnd;
-                break;
-            case Date:
-                sExpires = "; expires=" + vEnd.toUTCString();
-                break;
-        }
-    }
-    document.cookie = encodeURIComponent(sKey) + "=" + encodeURIComponent(sValue) + sExpires + (sDomain ? "; domain=" + sDomain : "") + (sPath ? "; path=" + sPath : "") + (bSecure ? "; secure" : "");
-    return true;
-}
-
 //Initialize pagination values
-var perPage = getCookie("per_page") || 5;
-var perPageIndex = getCookie("per_page_index") || 1;
+var perPage = Cookies.get("per_page") || 5;
+var perPageIndex = Cookies.get("per_page_index") || 1;
 
 var page = sessionStorage.getItem("page") || 1;
 var numPages = sessionStorage.getItem("num_pages") || 1;
@@ -641,7 +609,7 @@ function setToken() {
             $('#set-api-label').hide();
             $('#change-api-label').show();
             $('#change-api-label').css('color', '#228B22');
-            setCookie("api_token", $("#token").val(), Infinity, "/", "", true);
+            Cookies.set("api_token", $("#token").val());
         }
         api_token = $("#token").val();
         console.log("API Token Cookie set=" + api_token);
@@ -649,7 +617,7 @@ function setToken() {
         if (window.location.protocol == "file:") {
             window.localStorage.removeItem('api_token');
         } else {
-            deleteCookie("api_token", "/");
+            Cookies.remove("api_token");
             console.log("API Token Cookie unset");
         }
         $('#set-api-label').show();
@@ -665,7 +633,7 @@ function getToken() {
     if (window.location.protocol == "file:") {
         _token = window.localStorage.getItem('api_token');
     } else {
-        _token = getCookie("api_token");
+        _token = Cookies.get("api_token");
     }
     if (!_token) return "";
     return _token;
@@ -704,8 +672,8 @@ function perPageClick(_pageNumber, otherPerPage) {
             window.localStorage.setItem('per_page', pageNumber);
             window.localStorage.setItem('per_page_index', _pageNumber);
         } else {
-            setCookie("per_page", pageNumber, Infinity, "/", "", true);
-            setCookie("per_page_index", _pageNumber, Infinity, "/", "", true);
+            Cookies.set("per_page", pageNumber);
+            Cookies.set("per_page_index", _pageNumber);
         }
         perPage = pageNumber;
         perPageIndex = _pageNumber;
