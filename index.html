@@ -6,9 +6,10 @@
     <meta name="description" content="Get the latest release stats like download counts, release dates, author on any GitHub project">
     <meta name="keywords" content="GitHub, release, download, count">
     <link rel="icon" href="img/favicon.ico">
-    <link href='https://fonts.googleapis.com/css?family=Roboto' rel='stylesheet' type='text/css'>
+    <link href="https://fonts.googleapis.com/css?family=Roboto|Roboto+Mono" rel="stylesheet" type="text/css">
     <link rel="stylesheet" href="third-party/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="css/main.css">
+    <link type="text/css" rel="stylesheet" href="css/simplePagination.css" />
 </head>
 <body>
     <nav class="navbar navbar-default" role="navigation">
@@ -25,9 +26,16 @@
                     <span class="glyphicon glyphicon-stats"></span>&nbsp;
                     GitHub Release Stats
                 </a>
+                <a class="navbar-brand" id="settoken-btn" href="#">
+                    <div id="set-api-label"><span id="set-token" class="glyphicon glyphicon-user"></span>&nbsp;Set API token</div>
+                    <div id="change-api-label"><span id="change-token" class="glyphicon glyphicon-user green"></span>&nbsp;Change API token</div>
+                </a>
             </div>
             <div class="collapse navbar-collapse" id="main-navbar">
                 <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <div class="navbar-text d-flex justify-content-xl-between" id="ratelimit-div"></div>
+                    </li>
                     <li>
                         <a href="https://github.com/tooomm/github-release-stats" target="_blank">
                             <img src="https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg" alt="View GitHub repository" title="Release Stats GitHub Repository" align="top" height="18" />
@@ -38,7 +46,19 @@
         </div>
     </nav>
     <div class="container">
-        <div class="row">
+        <div class="row align-items-center" id="api">
+            <div class="col-md-4 col-md-offset-4" id="settoken-div">
+                <div class="form form-inline">
+                    <div class="form-group" style="margin-left: 5px;">
+                        <label for="token" class="mr-2 ml-2">API token:&nbsp;</label>
+                        <input type="password" name="token" id="token" value="" class="form-control input-sm" placeholder="leave empty to unset">&nbsp;&nbsp;
+                        <button class="btn btn-secondary" id="submit-token" type="submit">Set API token</button>
+                        <input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row" id="search">
             <div class="col-md-4 col-md-offset-4">
                 <h1>Enter project details&#8202;...</h1>
                 <div class="form form-inline">
@@ -52,7 +72,8 @@
                 </div>
             </div>
         </div>
-        <div class="row" id="description"><br>
+        <div class="row" id="description">
+            <br>
             <h1>...&#8202;and get the latest release stats for any public repo on GitHub&#8202;:</h1>
             <br><br>
             <p>
@@ -63,20 +84,57 @@
                 <span style="font-size:1.3em; color:lightgrey"><b>and more</b></span>
             </p>
         </div>
-        <div class="row" id="stats-result">
+        <div class="row">
+            <div class="row justify-content-between pagination-div" id="toppager-div">
+                <div class="col-md-6 col-md-offset-3">
+                    <div class="row d-flex justify-content-between">
+                        <div class="col-xs-8">
+                            <Font size="1">SELECT PAGE</Font>
+                            <div id="top-pagination"></div>
+                        </div>
+                        <div class="col-xs-4 float-right">
+                            <Font size="1">ITEMS PER PAGE</Font>
+                            <div id="top-perpage"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="stats-result">
+            </div>
+            <div class="row justify-content-between pagination-div" id="bottompager-div">
+                <div class="col-md-6 col-md-offset-3">
+                    <div class="row d-flex justify-content-between">
+                        <div class="col-xs-8">
+                            <Font size="1">SELECT PAGE</Font>
+                            <div id="bottom-pagination"></div>
+                        </div>
+                        <div class="col-xs-4 float-right">
+                            <Font size="1">ITEMS PER PAGE</Font>
+                            <div id="bottom-perpage"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div id="loader-gif">
-            <img src="img/gif-load.gif">
+        <div class="row no-gutters">
+            <div class="col col-md-offset-6" id="loader-gif">
+                <img src="img/gif-load.gif">
+            </div>
+        </div>
+        <div class="row no-gutters">
+            <div class="col col-md-offset-6" id="progress-div">
+            </div>
         </div>
     </div>
-    <div id="footer">
-        <div class="container">
-            Originally made with <span class="glyphicon glyphicon-heart"></span> by <a href="https://github.com/Somsubhra/github-release-stats" target="_blank">Somsubhra</a>
+        <div id="footer">
+            <div class="container">
+                Originally made with <span class="glyphicon glyphicon-heart"></span> by <a href="https://github.com/Somsubhra/github-release-stats" target="_blank">Somsubhra</a>
+            </div>
         </div>
-    </div>
 </body>
 <script type="text/javascript" src="third-party/jquery/jquery-1.11.1.min.js"></script>
 <script type="text/javascript" src="third-party/bootstrap/js/bootstrap.min.js"></script>
 <script type="text/javascript" src="third-party/typahead/bootstrap3-typeahead.min.js"></script>
+<script type="text/javascript" src="third-party/pagination/jquery.simplePagination.js"></script>
 <script type="text/javascript" src="js/main.js"></script>
 </html>
