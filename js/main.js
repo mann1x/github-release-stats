@@ -120,7 +120,6 @@ function getUserRepos() {
                 ratelimit_limit = xhr.getResponseHeader("x-ratelimit-limit");
                 ratelimit_remaining = xhr.getResponseHeader("x-ratelimit-remaining");
                 updateRateLimit(ratelimit_remaining, ratelimit_limit);
-                if (ratelimit_limit == 60 && api_token.length > 0) api_token_valid = false;
             }
         });
    
@@ -144,7 +143,10 @@ function showErrorMessage(data) {
         if (data.status == 401) {
             err = true;
             errMessage = "You are not authorized!";
-            if (api_token.length > 0) errMessage += "<br />Your API token is set and probably not valid";
+            if (api_token.length > 0) {
+                errMessage += "<br />Your API token is set and probably not valid";
+                $('#change-api-label').css('color', '#FF2D00');
+            }
         }
 
     } else if (data !== null) {
@@ -176,8 +178,8 @@ function showResultsDiv(html) {
 //Set authorization token
 function setTokenAuth(xhr) {
     api_token = getToken();
-    if (api_token) xhr.setRequestHeader('Authorization', 'token ' + api_token);
-    if (api_token) console.log("API token set");
+    if (api_token.length > 0) xhr.setRequestHeader('Authorization', 'token ' + api_token);
+    if (api_token.length > 0) console.log("API token set=" + api_token);
 }
 
 // Get single repository async for the overview
@@ -210,7 +212,6 @@ function getRepoLatest(item) {
             ratelimit_limit = xhr.getResponseHeader("x-ratelimit-limit");
             ratelimit_remaining = xhr.getResponseHeader("x-ratelimit-remaining");
             updateRateLimit(ratelimit_remaining, ratelimit_limit);
-            if (ratelimit_limit == 60 && api_token.length > 0) api_token_valid = false;
         });
 
         resolve();
@@ -250,7 +251,6 @@ function getRepoSingle() {
                 ratelimit_remaining = xhr.getResponseHeader("x-ratelimit-remaining");
                 updateRateLimit(ratelimit_remaining, ratelimit_limit);
                 link_header = xhr.getResponseHeader("link");
-                if (ratelimit_limit == 60 && api_token.length > 0) api_token_valid = false;
             });
         }
 
@@ -312,7 +312,6 @@ function getOverview() {
         ratelimit_limit = xhr.getResponseHeader("x-ratelimit-limit");
         ratelimit_remaining = xhr.getResponseHeader("x-ratelimit-remaining");
         updateRateLimit(ratelimit_remaining, ratelimit_limit);
-        if (ratelimit_limit == 60 && api_token.length > 0) api_token_valid = false;
     })
     .fail(function (data) {
         showErrorMessage(data);
@@ -636,15 +635,18 @@ const showRowStats = (data) => {
 function setToken() {
     if ($("#token").val().length > 0) {
         if (window.location.protocol == "file:") {
+            $('#set-api-label').hide();
+            $('#change-api-label').show();
+            $('#change-api-label').css('color', '#228B22');
             window.localStorage.setItem('api_token', $("#token").val());
-            $('#set-api-label').hide();
-            $('#change-api-label').show();
         } else {
-            setCookie("api_token", $("#token").val(), Infinity, "/", "", true);
             $('#set-api-label').hide();
             $('#change-api-label').show();
-            console.log("API Token Cookie set");
+            $('#change-api-label').css('color', '#228B22');
+            setCookie("api_token", $("#token").val(), Infinity, "/", "", true);
         }
+        api_token = $("#token").val();
+        console.log("API Token Cookie set=" + api_token);
     } else {
         if (window.location.protocol == "file:") {
             window.localStorage.removeItem('api_token');
@@ -653,7 +655,8 @@ function setToken() {
             console.log("API Token Cookie unset");
         }
         $('#set-api-label').show();
-        $('#change-api-label').hide();        
+        $('#change-api-label').hide();
+        api_token = '';
     }
     $("#settoken-div").hide();
 }
@@ -664,7 +667,7 @@ function getToken() {
     if (window.location.protocol == "file:") {
         _token = window.localStorage.getItem('api_token');
     } else {
-        _token = getCookie("api_token")
+        _token = getCookie("api_token");
     }
     if (!_token) return "";
     return _token;
@@ -759,7 +762,7 @@ $(function() {
         // check API token cookie
         api_token = getToken()
 
-        if (api_token != null && api_token != "") {
+        if (api_token != "") {
             $('#set-api-label').hide();
             $('#change-api-label').show();
             if (api_token_valid) {
