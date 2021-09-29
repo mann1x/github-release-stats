@@ -791,23 +791,6 @@ $(function() {
         }
     });
 
-    $("#get-stats-button").click(function () {
-        redirect(page, perPage);
-    });
-
-    $("#get-prev-results-button").click(function () {
-        redirect(page > 1 ? --page : 1, perPage);
-    });
-
-    $("#get-next-results-button").click(function () {
-        redirect(++page, perPage);
-    });
-
-    $("#per-page select").on('change', function () {
-        if (username == "" && repository == "") return;
-        redirect(page, this.value);
-    });
-
     var username = getQueryVariable("username");
     var repository = getQueryVariable("repository");
 
