@@ -77,12 +77,20 @@ function getUserRepos() {
             type: 'GET',
             dataType: 'json',
             beforeSend: setTokenAuth,
-            success: function (data) {
+            done: function (data) {
                 $.each(data, function (index, item) {
                     repoNames.push(item.name);
                 })
             },
-            done: function () {
+            fail: function (data) {
+                if (data) {
+                    if (data.status == 401 && api_token.length > 0) {
+                        api_token_valid = false;
+                        $('#change-api-label').css('color', '#FF2D00');
+                    }
+                }
+            },
+            always: function () {
                 ratelimit_limit = xhr.getResponseHeader("x-ratelimit-limit");
                 ratelimit_remaining = xhr.getResponseHeader("x-ratelimit-remaining");
                 updateRateLimit(ratelimit_remaining, ratelimit_limit);
@@ -145,7 +153,6 @@ function showResultsDiv(html) {
 function setTokenAuth(xhr) {
     api_token = getToken();
     if (api_token.length > 0) xhr.setRequestHeader('Authorization', 'token ' + api_token);
-    if (api_token.length > 0) console.log("API token set=" + api_token);
 }
 
 // Get single repository async for the overview
@@ -612,13 +619,12 @@ function setToken() {
             Cookies.set("api_token", $("#token").val());
         }
         api_token = $("#token").val();
-        console.log("API Token Cookie set=" + api_token);
     } else {
         if (window.location.protocol == "file:") {
             window.localStorage.removeItem('api_token');
         } else {
             Cookies.remove("api_token");
-            console.log("API Token Cookie unset");
+            console.log("API Token Cookie removed");
         }
         $('#set-api-label').show();
         $('#change-api-label').hide();
