@@ -634,7 +634,7 @@ function setToken() {
             $('#set-api-label').hide();
             $('#change-api-label').show();
         } else {
-            setCookie("api_token", $("#token").val()), Infinity, "/", "", true);
+            setCookie("api_token", $("#token").val(), Infinity, "/", "", true);
             $('#set-api-label').hide();
             $('#change-api-label').show();
         }
